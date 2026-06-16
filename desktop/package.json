@@ -1,0 +1,76 @@
+{
+  "name": "purepic-desktop",
+  "version": "1.0.1",
+  "description": "purepic desktop \u2014 Windows, Mac, Linux",
+  "main": "template/main.js",
+  "private": true,
+  "homepage": "https://github.com/ne0k1r4/purepic",
+  "author": {
+    "name": "LIGHT",
+    "email": "dev@purepic.io",
+    "url": "https://github.com/ne0k1r4"
+  },
+  "scripts": {
+    "start": "node src/cli.js",
+    "gui": "electron template/main.js",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "build:linux": "electron-builder --linux"
+  },
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "fs-extra": "^11.1.1",
+    "inquirer": "^8.2.6",
+    "sharp": "^0.32.6",
+    "glob": "^10.3.0"
+  },
+  "devDependencies": {
+    "electron": "28.3.3",
+    "electron-builder": "^24.9.1"
+  },
+  "build": {
+    "appId": "io.purepic.desktop",
+    "productName": "PurePic",
+    "electronVersion": "28.3.3",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "template/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.png"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.png",
+      "category": "public.app-category.photography"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "assets/icon.png",
+      "category": "Graphics"
+    }
+  }
+}

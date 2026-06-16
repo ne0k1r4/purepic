@@ -1,0 +1,12 @@
+node_modules/
+desktop/dist/
+desktop/node_modules/
+mobile/node_modules/
+mobile/android/build/
+mobile/android/app/build/
+mobile/ios/build/
+mobile/ios/Pods/
+.DS_Store
+*.log
+*.keystore
+!debug.keystore

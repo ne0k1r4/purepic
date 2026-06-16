@@ -1,0 +1,16 @@
+{
+  "name": "purepic",
+  "version": "1.0.0",
+  "description": "strip metadata from photos \u2014 desktop and mobile",
+  "scripts": {
+    "desktop": "cd desktop && node src/cli.js",
+    "desktop:gui": "cd desktop && electron template/main.js",
+    "mobile:android": "cd mobile && npx react-native run-android",
+    "mobile:ios": "cd mobile && npx react-native run-ios",
+    "build:desktop": "cd desktop && electron-builder",
+    "build:android": "cd mobile/android && ./gradlew assembleRelease",
+    "build:ios": "cd mobile && npx react-native build-ios --mode Release"
+  },
+  "author": "LIGHT",
+  "license": "MIT"
+}
