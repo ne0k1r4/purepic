@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>metastrip</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #0f0f13;
+      --surface: #1a1a22;
+      --border:  #2a2a38;
+      --accent:  #7c6aff;
+      --red:     #ff4d4d;
+      --green:   #4dff91;
+      --yellow:  #ffd24d;
+      --text:    #e8e8f0;
+      --muted:   #666680;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 13px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* header */
+    header {
+      padding: 16px 20px 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    header h1 { font-size: 16px; font-weight: 700; }
+    header span { color: var(--muted); font-size: 12px; }
+
+    /* drop zone */
+    #dropzone {
+      margin: 16px 20px;
+      border: 2px dashed var(--border);
+      border-radius: 10px;
+      padding: 28px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      flex-shrink: 0;
+    }
+    #dropzone:hover, #dropzone.over {
+      border-color: var(--accent);
+      background: rgba(124,106,255,0.05);
+    }
+    #dropzone p { color: var(--muted); margin-top: 6px; font-size: 12px; }
+
+    .drop-btns { display: flex; gap: 8px; justify-content: center; margin-top: 12px; }
+
+    btn, .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      cursor: pointer;
+      font-size: 12px;
+      font-family: inherit;
+      transition: background 0.12s, border-color 0.12s;
+    }
+    .btn:hover { background: var(--border); border-color: var(--accent); }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .btn.primary:hover { background: #6a59e8; }
+    .btn:disabled { opacity: 0.4; pointer-events: none; }
+
+    /* options bar */
+    #options {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 20px 12px;
+      flex-shrink: 0;
+    }
+    #options label { color: var(--muted); font-size: 12px; }
+    select {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      color: var(--text);
+      padding: 5px 8px;
+      font-size: 12px;
+      font-family: inherit;
+      outline: none;
+    }
+
+    /* file list */
+    #filelist {
+      flex: 1;
+      overflow-y: auto;
+      margin: 0 20px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    #filelist:empty::after {
+      content: "no files added yet";
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .file-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.1s;
+    }
+    .file-row:last-child { border-bottom: none; }
+    .file-row:hover { background: var(--surface); }
+
+    .file-name { flex: 1; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .file-meta { font-size: 11px; color: var(--muted); flex-shrink: 0; }
+    .file-status { font-size: 11px; flex-shrink: 0; min-width: 120px; text-align: right; }
+    .status-waiting  { color: var(--muted); }
+    .status-stripping { color: var(--yellow); }
+    .status-done     { color: var(--green); }
+    .status-error    { color: var(--red); }
+
+    .tag {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+    .tag-gps    { background: rgba(255,77,77,0.15); color: var(--red); }
+    .tag-device { background: rgba(255,210,77,0.15); color: var(--yellow); }
+
+    /* footer */
+    footer {
+      padding: 12px 20px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    #summary { flex: 1; color: var(--muted); font-size: 12px; }
+
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>metastrip</h1>
+    <span>remove metadata from photos before sharing</span>
+  </header>
+
+  <div id="dropzone" id="dropzone">
+    <div>drop photos here or</div>
+    <div class="drop-btns">
+      <button class="btn" id="pick-files">pick files</button>
+      <button class="btn" id="pick-folder">pick folder</button>
+    </div>
+    <p>supports jpg, png, webp, tiff</p>
+  </div>
+
+  <div id="options">
+    <label>save to:</label>
+    <select id="output-mode">
+      <option value="folder">stripped/ folder (safe)</option>
+      <option value="suffix">add -clean suffix</option>
+      <option value="overwrite">overwrite originals</option>
+    </select>
+    <label style="margin-left:8px">
+      <input type="checkbox" id="keep-dimensions" checked />
+      keep quality
+    </label>
+    <span style="flex:1"></span>
+    <button class="btn" id="clear-btn">clear</button>
+  </div>
+
+  <div id="filelist"></div>
+
+  <footer>
+    <div id="summary">no files added</div>
+    <button class="btn primary" id="strip-btn" disabled>strip metadata</button>
+    <button class="btn" id="open-folder-btn" disabled>open output folder</button>
+  </footer>
+
+  <script>
+    const api = window.metastripAPI
+    const filelist    = document.getElementById("filelist")
+    const summary     = document.getElementById("summary")
+    const stripBtn    = document.getElementById("strip-btn")
+    const openFolderBtn = document.getElementById("open-folder-btn")
+    const outputMode  = document.getElementById("output-mode")
+    const keepDim     = document.getElementById("keep-dimensions")
+
+    let files = []  // { path, name, meta, status, saved }
+    let lastOutputDir = null
+
+    // ── add files ──────────────────────────────────────────────────────────
+
+    document.getElementById("pick-files").onclick = async () => {
+      const paths = await api.pickFiles()
+      addFiles(paths)
+    }
+
+    document.getElementById("pick-folder").onclick = async () => {
+      const folder = await api.pickFolder()
+      if (folder) await api.pickFilesFromFolder(folder).then(addFiles).catch(() => {})
+      // TODO: implement folder scanning on main side and expose via ipc
+    }
+
+    document.getElementById("clear-btn").onclick = () => {
+      files = []
+      render()
+    }
+
+    async function addFiles(paths) {
+      for (const p of paths) {
+        if (files.find(f => f.path === p)) continue  // skip dupes
+        const name = p.split("/").pop()
+        const meta = await api.readMeta(p).catch(() => null)
+        files.push({ path: p, name, meta, status: "waiting", saved: 0 })
+      }
+      render()
+    }
+
+    // ── drag and drop ──────────────────────────────────────────────────────
+
+    const dropzone = document.getElementById("dropzone")
+    dropzone.addEventListener("dragover",  e => { e.preventDefault(); dropzone.classList.add("over") })
+    dropzone.addEventListener("dragleave", () => dropzone.classList.remove("over"))
+    dropzone.addEventListener("drop", async e => {
+      e.preventDefault()
+      dropzone.classList.remove("over")
+      const paths = Array.from(e.dataTransfer.files).map(f => f.path)
+      addFiles(paths)
+    })
+
+    // ── strip ──────────────────────────────────────────────────────────────
+
+    stripBtn.onclick = async () => {
+      if (!files.length) return
+      stripBtn.disabled = true
+
+      const mode     = outputMode.value
+      const keepDims = keepDim.checked
+
+      for (const file of files) {
+        if (file.status === "done") continue
+
+        file.status = "stripping"
+        render()
+
+        // figure out output path
+        const dir    = file.path.substring(0, file.path.lastIndexOf("/"))
+        const ext    = file.name.substring(file.name.lastIndexOf("."))
+        const base   = file.name.replace(ext, "")
+        let outPath
+
+        if (mode === "overwrite") {
+          outPath = file.path
+        } else if (mode === "suffix") {
+          outPath = dir + "/" + base + "-clean" + ext
+        } else {
+          outPath = dir + "/stripped/" + file.name
+          lastOutputDir = dir + "/stripped"
+        }
+
+        const result = await api.stripFile({ input: file.path, output: outPath, keepDimensions: keepDims })
+
+        if (result.ok) {
+          file.status = "done"
+          file.saved  = result.saved
+          if (!lastOutputDir && mode !== "overwrite") lastOutputDir = outPath.substring(0, outPath.lastIndexOf("/"))
+        } else {
+          file.status = "error"
+          file.error  = result.error
+        }
+
+        render()
+      }
+
+      stripBtn.disabled = false
+      if (lastOutputDir) openFolderBtn.disabled = false
+    }
+
+    openFolderBtn.onclick = () => {
+      if (lastOutputDir) api.openFolder(lastOutputDir)
+    }
+
+    // ── render ─────────────────────────────────────────────────────────────
+
+    function render() {
+      filelist.innerHTML = ""
+
+      for (const f of files) {
+        const row = document.createElement("div")
+        row.className = "file-row"
+
+        const tags = []
+        if (f.meta?.gps)    tags.push("<span class='tag tag-gps'>GPS</span>")
+        if (f.meta?.device) tags.push("<span class='tag tag-device'>device</span>")
+
+        const statusText = {
+          waiting:   "<span class='status-waiting'>waiting</span>",
+          stripping: "<span class='status-stripping'>stripping...</span>",
+          done:      "<span class='status-done'>✓ done" + (f.saved > 0 ? " (" + fmt(f.saved) + " smaller)" : "") + "</span>",
+          error:     "<span class='status-error'>✗ " + (f.error || "failed") + "</span>"
+        }[f.status]
+
+        row.innerHTML = `
+          <span class="file-name" title="${f.path}">${f.name}</span>
+          ${tags.join(" ")}
+          <span class="file-status">${statusText}</span>
+        `
+        filelist.appendChild(row)
+      }
+
+      // summary
+      const done    = files.filter(f => f.status === "done").length
+      const waiting = files.filter(f => f.status === "waiting").length
+      const errors  = files.filter(f => f.status === "error").length
+      const withGps = files.filter(f => f.meta?.gps).length
+
+      if (!files.length) {
+        summary.textContent = "no files added"
+      } else {
+        summary.textContent = files.length + " file(s)"
+        if (withGps)  summary.textContent += " · " + withGps + " with GPS"
+        if (done)     summary.textContent += " · " + done + " done"
+        if (errors)   summary.textContent += " · " + errors + " failed"
+      }
+
+      stripBtn.disabled = !waiting
+    }
+
+    function fmt(bytes) {
+      if (bytes < 1024) return bytes + "B"
+      return (bytes / 1024).toFixed(1) + "KB"
+    }
+
+    render()
+  </script>
+</body>
+</html>
