@@ -1,0 +1,66 @@
+name: Build Desktop Apps
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - desktop/**
+  workflow_dispatch:  # lets you trigger manually from GitHub UI
+
+jobs:
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: install deps
+        run: cd desktop && npm install
+      - name: build linux
+        run: cd desktop && npm run build:linux
+      - name: upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-builds
+          path: desktop/dist/*.AppImage
+          retention-days: 30
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: install deps
+        run: cd desktop && npm install
+      - name: build windows
+        run: cd desktop && npm run build:win
+      - name: upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-builds
+          path: desktop/dist/*.exe
+          retention-days: 30
+
+  build-mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: install deps
+        run: cd desktop && npm install
+      - name: build mac
+        run: cd desktop && npm run build:mac
+      - name: upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-builds
+          path: desktop/dist/*.dmg
+          retention-days: 30
+
+  # workflow_dispatch allows manual trigger from Actions tab
