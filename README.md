@@ -1,6 +1,6 @@
 # purepic
 
-Strip metadata from photos before sharing. Available on Windows, Mac, Linux, Android, and iOS.
+Strip metadata from photos before sharing. Available on Windows, Mac, Linux, Android, and iOS. (Currently in development stage)
 
 Your photos contain GPS coordinates, device info, date and time, and more. This removes all of it before the photo leaves your hands.
 
