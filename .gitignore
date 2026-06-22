@@ -10,3 +10,4 @@ mobile/ios/Pods/
 *.log
 *.keystore
 !debug.keystore
+dist/
