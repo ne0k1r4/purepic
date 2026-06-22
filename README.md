@@ -1,8 +1,8 @@
 # purepic
 
-Strip metadata from photos before sharing. Available on Windows, Mac, Linux, Android, and iOS. (Currently in development stage)
+Strip metadata from photos before sharing. Available on Windows, Mac, Linux, Android, iOS, and Web. (Currently in development stage)
 
-Your photos contain GPS coordinates, device info, date and time, and more. This removes all of it before the photo leaves your hands.
+Your photos contain hidden tracking telemetry: GPS coordinates, device info, software footprint, dates, and times. This client-side tool removes all of it before the photo leaves your hands.
 
 ---
 
@@ -10,11 +10,12 @@ Your photos contain GPS coordinates, device info, date and time, and more. This 
 
 | Platform | Type | Status |
 |---|---|---|
-| Windows | Desktop GUI + CLI | ✓ |
+| Windows | Desktop GUI + CLI | ✓ (Wine compiled) |
 | macOS | Desktop GUI + CLI | ✓ |
-| Linux | Desktop GUI + CLI | ✓ |
-| Android | Mobile app | ✓ |
-| iOS | Mobile app | ✓ |
+| Linux | Desktop GUI + CLI | ✓ (AppImage + deb) |
+| Web | HTML5 client-side App | ✓ (Yuki Theme & Glassmorphism) |
+| Android | Mobile app outline | ✓ (Mock structure) |
+| iOS | Mobile app outline | ✓ (Mock structure) |
 
 ---
 
@@ -23,27 +24,44 @@ Your photos contain GPS coordinates, device info, date and time, and more. This 
 ```
 purepic/
 ├── desktop/          ← Electron app (Windows, Mac, Linux)
+│   ├── assets/
+│   │   └── icon.png      app logo design
 │   ├── src/
 │   │   ├── cli.js        CLI entry point
 │   │   ├── stripper.js   core metadata removal
-│   │   └── utils.js      url validation, helpers
+│   │   └── utils.js      byte formatter, URL helpers
 │   └── template/
 │       ├── main.js       Electron main process
 │       ├── preload.js    context bridge
 │       └── index.html    GUI
 │
-└── mobile/           ← React Native app (Android + iOS)
-    ├── App.js            root with navigation
+├── web/              ← In-browser static Web App
+│   ├── index.html        Glassmorphism UI dashboard
+│   ├── app.js            Canvas particle engine & Mascot Yuki dialogue
+│   └── mascot.png        Cybersec yuki-chan illustration
+│
+└── mobile/           ← React Native app outline (Android + iOS)
+    ├── App.js            root navigation layout
+    ├── AndroidManifest.xml manifest template
     └── src/
         ├── screens/
-        │   ├── HomeScreen.js    pick photos, see metadata
-        │   └── ResultScreen.js  save or share clean photos
+        │   ├── HomeScreen.js    photo loader UI
+        │   └── ResultScreen.js  save/share clean photos
         ├── components/
-        │   └── MetaCard.js      metadata tags component
+        │   └── MetaCard.js      metadata tag rendering
         └── utils/
             ├── stripper.js      exif reader + image re-encoder
-            └── permissions.js   Android + iOS permissions
+            └── permissions.js   permission requests handler
 ```
+
+---
+
+## web app: yuki edition
+
+The web client runs completely client-side. It features:
+* **Interactive Yuki Companion**: The cybersecurity mascot *Yuki* responds statefully to your actions, warning you of coordinates found or celebrating a successful metadata purification.
+* **Canvas Sakura particles**: Glowing purple and pink cyber-leaves float dynamically in the background, swaying with mouse interaction.
+* **Glassmorphism Panels**: A translucent frosted-glass visual design with glowing neon accents.
 
 ---
 
@@ -59,16 +77,17 @@ npm install
 ### run
 
 ```bash
-npm start          # CLI
-npm run gui        # Electron GUI
+npm start          # Run CLI utility
+npm run gui        # Launch Electron desktop GUI
 ```
 
 ### build installers
 
+We compile desktop packages locally on Linux using `electron-builder` (utilizing Wine for Windows cross-compilation):
+
 ```bash
-npm run build:win    # → dist/PurePic Setup.exe
-npm run build:mac    # → dist/PurePic.dmg
-npm run build:linux  # → dist/PurePic.AppImage + .deb + .rpm
+npm run build:linux  # → dist/PurePic-1.0.1.AppImage + purepic-desktop_1.0.1_amd64.deb
+npm run build:win    # → dist/PurePic Setup 1.0.1.exe (built via Wine)
 ```
 
 ### CLI usage
@@ -81,71 +100,16 @@ node src/cli.js *.jpg
 
 ---
 
-## mobile
+## compiled packages
 
-### requirements
-
-- Node 18+
-- React Native CLI
-- Android Studio (for Android)
-- Xcode 14+ (for iOS, Mac only)
-
-### install
-
-```bash
-cd mobile
-npm install
-npx pod-install    # iOS only
-```
-
-### run
-
-```bash
-npm run android    # run on Android device/emulator
-npm run ios        # run on iOS simulator (Mac only)
-```
-
-### build
-
-```bash
-# Android APK
-cd mobile/android && ./gradlew assembleRelease
-# → mobile/android/app/build/outputs/apk/release/app-release.apk
-
-# iOS IPA (Mac only)
-cd mobile && npx react-native build-ios --mode Release
-```
-
----
-
-## what gets removed
-
-- GPS location (latitude, longitude, altitude)
-- Device make and model
-- Software used (Lightroom, Photoshop, GIMP...)
-- Date and time photo was taken
-- Author and copyright info
-- ICC color profiles
-- IPTC and XMP data
-- Embedded thumbnails
-
----
-
-## tips
-
-- Desktop: use the stripped/ folder output mode — safest, keeps originals untouched
-- Mobile: photos save to Pictures/purepic on Android, Camera Roll on iOS
-- GPS tag shown in red — most dangerous, reveals your location
-- Run desktop CLI with DEBUG=1 if something breaks
+Build assets are packaged under the root `/dist/` folder:
+* **Linux AppImage**: `dist/PurePic-1.0.1.AppImage`
+* **Linux deb package**: `dist/purepic-desktop_1.0.1_amd64.deb`
+* **Windows Installer**: `dist/PurePic_Setup_1.0.1.exe`
+* **Web Static ZIP**: `dist/purepic-web-client-1.0.1.zip`
 
 ---
 
 ## license
 
 MIT
-
-
-
-
-
-
