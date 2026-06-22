@@ -407,11 +407,3 @@ window.downloadOne = function(i) {
 
 window.stripAll    = stripAll
 window.downloadAll = downloadAll
-// paste from clipboard support TODO
-// show file size before and after
-// handle png alpha channel correctly
-// revoke object urls after use
-// dedup files by name and size
-// reset file input after picking
-// download button hidden until files done
-// dragover style reset on drop
