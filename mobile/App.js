@@ -1,7 +1,3 @@
-// App.js — root entry point
-// TODO: add splash screen
-// TODO: add onboarding for first time users
-
 import React from "react"
 import { StatusBar, useColorScheme } from "react-native"
 import { NavigationContainer } from "@react-navigation/native"

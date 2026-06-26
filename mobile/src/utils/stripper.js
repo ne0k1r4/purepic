@@ -1,10 +1,3 @@
-// stripper.js — core metadata removal logic for React Native
-// uses react-native-fs to read/write files
-// uses react-native-exif to read metadata
-// strips by re-encoding the image without metadata
-// TODO: add HEIC support for newer iphones
-// TODO: try to use native Android ExifInterface for better accuracy
-
 import RNFS from "react-native-fs"
 import Exif from "react-native-exif"
 import { Image } from "react-native"

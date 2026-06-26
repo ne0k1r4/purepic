@@ -1,8 +1,3 @@
-// ResultScreen.js — shows stripped files, lets user save or share
-// TODO: add share to specific app (WhatsApp, Telegram etc)
-// TODO: show before/after file size comparison
-// TODO: add option to delete originals after stripping
-
 import React from "react"
 import {
   View, Text, StyleSheet, TouchableOpacity,

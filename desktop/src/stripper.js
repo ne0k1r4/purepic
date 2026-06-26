@@ -1,12 +1,4 @@
-// stripper.js — core metadata removal logic
-// uses sharp under the hood — it strips exif by default when reprocessing
-// which is exactly what we need, no extra work required
-//
-// sharp docs: https://sharp.pixelplumbing.com
-//
-// TODO: add PDF metadata stripping via pdf-lib
-// TODO: HEIC support needs @sharpen/heif or similar native binding
-// TODO: video metadata stripping would need ffmpeg
+// stripper.js — metadata removal using sharp
 
 'use strict'
 
@@ -14,8 +6,7 @@ const sharp = require('sharp')
 const fs    = require('fs-extra')
 const path  = require('path')
 
-// reads metadata from a file and returns a human-readable summary
-// returns null if nothing interesting found — caller decides what to do
+// Read metadata and return summary
 async function readMeta(filePath) {
   try {
     const meta = await sharp(filePath).metadata()
@@ -29,36 +20,29 @@ async function readMeta(filePath) {
       if (parsed.date)     result.date     = parsed.date
     }
 
-    // icc = color profile, iptc = publisher info, xmp = adobe metadata
     if (meta.icc)  result.colorProfile = 'embedded'
     if (meta.iptc) result.iptc         = 'embedded'
     if (meta.xmp)  result.xmp          = 'embedded'
 
     return Object.keys(result).length ? result : null
   } catch {
-    // file might be corrupt or unreadable — not crashing for this
     return null
   }
 }
 
-// strips ALL metadata by re-processing the image through sharp
-// sharp strips exif/icc/iptc/xmp by default — we just make it explicit
-// with withMetadata(false) to be absolutely sure
+// Strip all metadata from image file
 async function stripFile(inputPath, outputPath, opts = {}) {
   const ext = path.extname(inputPath).toLowerCase()
 
   await fs.ensureDir(path.dirname(outputPath))
 
-  // quality setting — slightly lower when keepQuality is off saves more space
   const q = opts.keepQuality ? 95 : 88
 
   let pipeline = sharp(inputPath).withMetadata(false)
 
-  // handle each format explicitly — lets us tune quality per format
   switch (ext) {
     case '.jpg':
     case '.jpeg':
-      // mozjpeg = better compression at same visual quality
       pipeline = pipeline.jpeg({ quality: q, mozjpeg: true })
       break
 
@@ -72,8 +56,6 @@ async function stripFile(inputPath, outputPath, opts = {}) {
 
     case '.tiff':
     case '.tif':
-      // lzw is lossless compression — tiff files are usually from cameras
-      // so we want to preserve quality exactly
       pipeline = pipeline.tiff({ quality: 100, compression: 'lzw' })
       break
 
@@ -84,43 +66,77 @@ async function stripFile(inputPath, outputPath, opts = {}) {
   await pipeline.toFile(outputPath)
 }
 
-// basic exif parser — pulls the fields we actually care about showing
-// not using a full exif library to keep deps light
-// covers the most common metadata people dont know is there
+// Binary EXIF tag parser
 function parseExif(buf) {
   const result = {}
 
   try {
-    const str = buf.toString('latin1')
+    const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength)
+    
+    if (view.getUint32(0) !== 0x45786966 || view.getUint16(4) !== 0x0000) return result
 
-    // GPS — the most dangerous one
-    // checking for GPS IFD marker (0x8825) or the string GPS in exif
-    const hasGps = buf.indexOf(Buffer.from([0x88, 0x25])) > -1 || str.includes('GPS')
-    if (hasGps) result.gps = 'location data found'
+    const tiffOffset = 6
+    const byteOrder  = view.getUint16(tiffOffset)
+    const le         = byteOrder === 0x4949
 
-    // device detection — cover the most popular brands
-    const devices = ['iPhone', 'iPad', 'Samsung', 'Pixel', 'OnePlus', 'Xiaomi',
-                     'Canon', 'Nikon', 'Sony', 'Fujifilm', 'Olympus', 'Panasonic']
-    for (const d of devices) {
-      if (str.includes(d)) { result.device = d; break }
+    const getU16 = (o) => view.getUint16(tiffOffset + o, le)
+    const getU32 = (o) => view.getUint32(tiffOffset + o, le)
+
+    const ifdOffset = getU32(4)
+    const numEntries = getU16(ifdOffset)
+
+    for (let i = 0; i < numEntries; i++) {
+      const entryOffset = ifdOffset + 2 + i * 12
+      const tag  = getU16(entryOffset)
+      const val  = getU32(entryOffset + 8)
+
+      switch (tag) {
+        case 0x010F: result.make     = readString(view, tiffOffset, entryOffset, le); break
+        case 0x0110: result.model    = readString(view, tiffOffset, entryOffset, le); break
+        case 0x0131: result.software = readString(view, tiffOffset, entryOffset, le); break
+        case 0x013B: result.artist   = readString(view, tiffOffset, entryOffset, le); break
+        case 0x0132: result.dateTime = readString(view, tiffOffset, entryOffset, le); break
+        case 0x8825: result.gps      = 'location data found'; break
+        case 0x9003: result.dateOrig = readString(view, tiffOffset, entryOffset, le); break
+      }
     }
 
-    // software used to edit or take the photo
-    const softwares = ['Lightroom', 'Photoshop', 'GIMP', 'Capture One',
-                       'Snapseed', 'VSCO', 'Darkroom', 'Affinity Photo']
-    for (const s of softwares) {
-      if (str.includes(s)) { result.software = s; break }
+    if (result.make || result.model) {
+      result.device = [result.make, result.model].filter(Boolean).join(' ').trim().slice(0, 40)
     }
-
-    // date the photo was taken — format is YYYY:MM:DD HH:MM:SS in exif
-    const dateMatch = str.match(/20\d\d:\d\d:\d\d \d\d:\d\d:\d\d/)
-    if (dateMatch) result.date = dateMatch[0].replace(/^(\d+):(\d+):(\d+)/, '$1-$2-$3')
-
-  } catch {
-    // parse failed — return whatever we have so far
-  }
+    if (result.dateOrig || result.dateTime) {
+      const raw = (result.dateOrig || result.dateTime).slice(0, 10)
+      result.date = raw.replace(/:/g, '-')
+    }
+  } catch {}
 
   return result
+}
+
+// Read ASCII string value from TIFF header
+function readString(view, tiffOffset, entryOffset, le) {
+  try {
+    const count  = le ? view.getUint32(entryOffset + 4, true) : view.getUint32(entryOffset + 4, false)
+    const offset = le ? view.getUint32(entryOffset + 8, true) : view.getUint32(entryOffset + 8, false)
+    if (count <= 4) {
+      let s = ''
+      for (let i = 0; i < count - 1; i++) {
+        const c = view.getUint8(entryOffset + 8 + i)
+        if (c === 0) break
+        s += String.fromCharCode(c)
+      }
+      return s.trim() || null
+    }
+    let s = ''
+    for (let i = 0; i < Math.min(count - 1, 100); i++) {
+      const c = view.getUint8(tiffOffset + offset + i)
+      if (c === 0) break
+      s += String.fromCharCode(c)
+    }
+    return s.trim() || null
+  } catch {
+    return null
+  }
 }
 
 module.exports = { stripFile, readMeta }

@@ -1,7 +1,3 @@
-// MetaCard.js — reusable component that shows metadata tags on a file
-// used in both HomeScreen and ResultScreen
-// TODO: add tap to see full metadata details in a modal
-
 import React from "react"
 import { View, Text, StyleSheet } from "react-native"
 

@@ -1,8 +1,3 @@
-// HomeScreen.js — main screen where user picks photos
-// TODO: add batch select from gallery
-// TODO: show storage permission rationale if denied
-// TODO: add recent files list so they dont have to re-pick
-
 import React, { useState } from "react"
 import {
   View, Text, StyleSheet, TouchableOpacity,
